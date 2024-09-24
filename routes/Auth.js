@@ -39,7 +39,7 @@ router.post("/register", async (req, res) => {
     const user = new User({
       username,
       email,
-      password:hashedPassword, //hashedPassword, // Store the hashed password
+      password: hashedPassword, //hashedPassword, // Store the hashed password
     });
     console.log("Hashed Password:", hashedPassword);
 
@@ -77,15 +77,15 @@ router.post("/admin/register", async (req, res) => {
     }
 
     // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new Admin
     const newAdmin = new Admin({
       adminNumber,
       email,
-      password:hashedPassword, //hashedPassword, // Store the hashed password
+      password, //hashedPassword, // Store the hashed password
     });
-    console.log("Hashed Password:", hashedPassword);
+    // console.log("Hashed Password:", hashedPassword);
 
     await newAdmin.save();
     res.status(201).json({ message: "Admin registered successfully" });
@@ -108,16 +108,22 @@ router.post("/admin/login", async (req, res) => {
   }
 
   try {
-    const user = await Admin.findOne({ adminNumber });
+    const user = await Admin.findOne({ adminNumber }).select("+password");
+
     if (!user) {
       console.log("Admin not found");
       return res.status(401).json({ message: "Admin number not found." });
     }
 
     console.log("Stored Hash:", user.password);
+    console.log("Login - Admin Number:", adminNumber);
+    console.log("Login - Entered Password:", password);
+    console.log("Login - Stored Hashed Password:", this.password);
+
     // Pass the password to matchPassword
     const isMatch = await user.matchPassword(password);
     console.log("Password Match Result:", isMatch);
+    console.log("Login - Password Comparison Result:", isMatch);
 
     if (!isMatch) {
       console.log("Password mismatch");
@@ -125,7 +131,7 @@ router.post("/admin/login", async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
     console.log(token);
@@ -178,7 +184,9 @@ router.post("/login", async (req, res) => {
 
 // Middleware to authenticate JWT token
 const protect = (req, res, next) => {
+  console.log("Authorization Header:", req.headers.authorization);
   const token = req.headers.authorization?.split(" ")[1];
+
   if (!token) {
     return res.status(401).json({ message: "Access banned." });
   }
@@ -201,7 +209,7 @@ const isAdmin = async (req, res, next) => {
     if (!req.user || !req.user.id) {
       return res
         .status(401)
-        .json({ message: "Unauthorized. User information is missing." });
+        .json({ message: "Unauthorized. Admin information is missing." });
     }
     const admin = await Admin.findById(req.user.id);
 

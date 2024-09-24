@@ -27,19 +27,20 @@ router.get("/questions/:category", protect, async (req, res) => {
 // Routes accessible to authenticated users.
 router.post("/submit", protect, async (req, res) => {
   const { category, answers } = req.body;
+  console.log("Decoded user in /submit:", req.user);
   const userId = req.user.id;
   try {
-    // Save the test answers for the user
     const test = new Test({
       userId,
       category,
       answers,
     });
-    console.log("Test data:", { userId: req.user.id, category, answers });
 
+    console.log("Saving Test:", { userId, category, answers });
     await test.save();
     res.status(201).json({ message: "Test submitted successfully" });
   } catch (error) {
+    console.error("Error submitting test:", error);
     res.status(500).json({ message: "Error submitting test", error });
   }
 });
@@ -47,14 +48,14 @@ router.post("/submit", protect, async (req, res) => {
 // Get all tests submitted by a user
 // Admin Access Only: Route to retrieve all tests submitted by a specific user
 router.get("/submitted", protect, isAdmin, async (req, res) => {
-    console.log("User ID from request:", req.user.id);
+//   if (!userId) {
+//     return res.status(400).json({ message: "User ID not found in request" });
+//   }
+  //   console.log("User ID from request:", userId);
   try {
-    const tests = await Test.find({ userId: req.user.id }).populate(
-      "userId",
-      "username email"
-    );
+    const tests = await Test.find().populate("userId", "username email");
     console.log("Retrieved tests:", tests);
-    console.log("Retrieved tests for user:", req.user.id);
+    // console.log("Retrieved tests for user:", userId);
 
     res.json(tests);
   } catch (error) {
@@ -64,7 +65,7 @@ router.get("/submitted", protect, isAdmin, async (req, res) => {
       .json({ message: "Error retrieving tests", error: error.message });
   }
 });
-router.get("/test-query", protect, async (req, res) => {
+router.get("/test-query", async (req, res) => {
   try {
     const tests = await Test.find();
     res.json(tests);
