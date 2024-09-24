@@ -33,13 +33,13 @@ router.post("/register", async (req, res) => {
     }
 
     // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new user
     const user = new User({
       username,
       email,
-      password: hashedPassword, //hashedPassword, // Store the hashed password
+      password, //hashedPassword, // Store the hashed password
     });
     console.log("Hashed Password:", hashedPassword);
 
@@ -154,7 +154,7 @@ router.post("/login", async (req, res) => {
   console.log("Input Password:", password);
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select("+password");
     if (!user) {
       console.log("User not found");
       return res.status(401).json({ message: "Email mismatch" });
