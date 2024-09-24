@@ -7,7 +7,7 @@ const router = express.Router();
 // Get categories
 // Routes accessible to authenticated users.
 router.get("/categories", protect, (req, res) => {
-  const categories = ["React.js", "PHP", "Python", "C++", "Java", "HTML"];
+  const categories = ["React.js", "PHP", "Python", "C++", "Java", "HTML","AWS","Google Cloud"];
   res.json(categories);
 });
 
@@ -48,14 +48,9 @@ router.post("/submit", protect, async (req, res) => {
 // Get all tests submitted by a user
 // Admin Access Only: Route to retrieve all tests submitted by a specific user
 router.get("/submitted", protect, isAdmin, async (req, res) => {
-//   if (!userId) {
-//     return res.status(400).json({ message: "User ID not found in request" });
-//   }
-  //   console.log("User ID from request:", userId);
   try {
     const tests = await Test.find().populate("userId", "username email");
     console.log("Retrieved tests:", tests);
-    // console.log("Retrieved tests for user:", userId);
 
     res.json(tests);
   } catch (error) {
@@ -73,6 +68,7 @@ router.get("/test-query", async (req, res) => {
     res.status(500).json({ message: "Error executing test query", error });
   }
 });
+
 // Get a specific test by ID
 // Admin Access Only: Route to retrieve a specific test by its ID
 router.get("/submitted/:id", protect, isAdmin, async (req, res) => {
