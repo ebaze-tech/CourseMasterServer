@@ -3,7 +3,20 @@ const mongoose = require("mongoose");
 const questionSchema = new mongoose.Schema({
   category: { type: String, required: true },
   questionText: { type: String, required: true },
-  answers: [{ type: String }], //Multiple choice options or theory
+  questionType: {
+    type: String,
+    enum: ["objective", "theory"],
+    required: true,
+  },
+  options: {
+    type: [String],
+    validate: {
+      validator: function (v) {
+        return this.questionType === "objective" ? v.length > 0 : true;
+      },
+      message: "Options are required for objective questions",
+    },
+  },
   correctAnswer: { type: String },
 });
 
