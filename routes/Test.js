@@ -1,7 +1,7 @@
 const express = require("express");
 const Question = require("../models/Question");
 const Test = require("../models/Test");
-const { protect, isAdmin } = require("./auth");
+const { protect, isAdmin } = require("./Authentication");
 const router = express.Router();
 
 // Get categories

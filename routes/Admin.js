@@ -3,7 +3,7 @@ const router = express.Router();
 const Test = require("../models/Test"); // Assuming you have a Test model
 
 // Middleware for authentication
-const { protect, isAdmin } = require("./auth");
+const { protect, isAdmin } = require("./Authentication");
 
 // Get all scores
 router.get("/scores", protect, isAdmin, async (req, res) => {
