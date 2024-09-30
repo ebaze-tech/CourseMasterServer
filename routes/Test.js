@@ -5,7 +5,6 @@ const { protect, isAdmin } = require("./Authentication");
 const router = express.Router();
 
 // Get categories
-// Routes accessible to authenticated users.
 router.get("/categories", protect, (req, res) => {
   const categories = [
     "React.js",
@@ -21,7 +20,6 @@ router.get("/categories", protect, (req, res) => {
 });
 
 // Get questions for a specific category
-// Routes accessible to authenticated users.
 router.get("/questions/:category", protect, async (req, res) => {
   const category = req.params.category;
   console.log("Category received:", category);
@@ -39,17 +37,12 @@ router.get("/questions/:category", protect, async (req, res) => {
 });
 
 // Submit the test
-// Routes accessible to authenticated users.
-
-// Submit the test
-// Routes accessible to authenticated users.
-// Submitting the test
 router.post("/submit", protect, async (req, res) => {
   const { category, answers } = req.body;
   const userId = req.user.id;
 
   try {
-    const enhancedAnswers = await Promise.all(
+    const gradedAnswers = await Promise.all(
       answers.map(async (answer) => {
         const question = await Question.findById(answer.questionId);
 
@@ -58,29 +51,41 @@ router.post("/submit", protect, async (req, res) => {
         }
 
         const isCorrect = answer.answer === question.correctAnswer;
+        const score = isCorrect ? 1 : 0;
 
         return {
           questionId: answer.questionId,
           answer: answer.answer,
           correctAnswer: question.correctAnswer,
-          isCorrect,
           category: question.category,
+          isCorrect,
+          score,
         };
       })
     );
 
-    // Calculate score
-    const score = enhancedAnswers.filter((a) => a.isCorrect).length;
+    // Calculate total score
+    const totalScore = gradedAnswers.reduce(
+      (acc, answer) => acc + answer.score,
+      0
+    );
 
+    // Save the test in the database
     const test = new Test({
       userId,
       category,
-      answers: enhancedAnswers,
-      score, // Save the score
+      answers: gradedAnswers,
+      totalScore,
     });
 
     await test.save();
-    res.status(201).json({ message: "Test submitted successfully", score });
+
+    // Respond with the graded answers and the total score
+    res.status(201).json({
+      message: "Test submitted and graded successfully",
+      totalScore,
+      answers: gradedAnswers,
+    });
   } catch (error) {
     console.error("Error submitting test:", error);
     res
@@ -89,8 +94,61 @@ router.post("/submit", protect, async (req, res) => {
   }
 });
 
-// Get all tests submitted by a user
-// Admin Access Only: Route to retrieve all tests submitted by a specific user
+// Get all tests submitted by all users (Admin Access Only)
+router.get("/submitted", protect, isAdmin, async (req, res) => {
+  try {
+    const tests = await Test.find().populate("userId", "username email");
+    console.log("Retrieved tests:", tests);
+
+    // Log the tests retrieved, along with any that don't have a userId
+
+    // tests.forEach((test) => {
+    //   if (test.userId) {
+    //     console.log(`Test by ${test.userId.username} retrieved.`);
+    //   } else {
+    //     console.log(`Test ID ${test._id} has no associated user.`);
+    //   }
+    // });
+
+    res.json(tests);
+  } catch (error) {
+    console.error("Error retrieving tests:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving tests", error: error.message });
+  }
+});
+
+// Get a specific test by ID (Admin Access Only)
+router.get("/submitted/:id", protect, isAdmin, async (req, res) => {
+  try {
+    const test = await Test.findById(req.params.id)
+      .populate("userId", "username email")
+      .populate({
+        path: "answers.questionId",
+        select: "questionText category options correctAnswer", // Include fields relevant to display
+      });
+
+    if (!test) return res.status(404).json({ message: "Test not found" });
+    res.json(test);
+  } catch (error) {
+    console.error("Error retrieving test:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving test", error: error.message });
+  }
+});
+
+router.get("/test-query", async (req, res) => {
+  try {
+    const tests = await Test.find();
+    res.json(tests);
+  } catch (error) {
+    res.status(500).json({ message: "Error executing test query", error });
+  }
+});
+
+// Get all tests submitted by a user (Admin Access Only)
 router.get("/submitted", protect, isAdmin, async (req, res) => {
   try {
     const tests = await Test.find().populate("userId", "username email");
@@ -104,47 +162,21 @@ router.get("/submitted", protect, isAdmin, async (req, res) => {
       .json({ message: "Error retrieving tests", error: error.message });
   }
 });
-router.get("/test-query", async (req, res) => {
+
+// Get all test scores (Admin Access Only)
+router.get("/results", protect, isAdmin, async (req, res) => {
   try {
-    const tests = await Test.find();
+    const tests = await Test.find({ userId: { $ne: null } }).populate(
+      "userId",
+      "username email"
+    );
     res.json(tests);
   } catch (error) {
-    res.status(500).json({ message: "Error executing test query", error });
-  }
-});
-
-// Get a specific test by ID
-// Admin Access Only: Route to retrieve a specific test by its ID
-// Get a specific test by ID
-router.get("/submitted/:id", protect, isAdmin, async (req, res) => {
-  try {
-    const test = await Test.findById(req.params.id)
-      .populate("userId", "username email")
-      .populate({
-        path: "answers.questionId",
-        select: "questionText category correctAnswer", // Include fields relevant to display
-      });
-
-    if (!test) return res.status(404).json({ message: "Test not found" });
-    res.json(test);
-  } catch (error) {
-    console.error("Error retrieving test:", error);
-    res
-      .status(500)
-      .json({ message: "Error retrieving test", error: error.message });
-  }
-});
-
-// Get all test scores (admin only)
-// Admin Access Only**: Route to retrieve all test scores
-router.get("/scores", protect, isAdmin, async (req, res) => {
-  try {
-    const tests = await Test.find().populate("userId", "username email");
-    res.json(tests);
-  } catch (error) {
+    console.error("Error retrieving scores:", error);
     res
       .status(500)
       .json({ message: "Error retrieving scores", error: error.message });
   }
 });
+
 module.exports = router;

@@ -1,18 +1,31 @@
 const express = require("express");
-const router = express.Router();
-const Test = require("../models/Test"); // Assuming you have a Test model
-
-// Middleware for authentication
+// const Question = require("../models/Question");
 const { protect, isAdmin } = require("./Authentication");
+const Test = require("../models/Test");
+const router = express.Router();
+const multer = require("multer");
+// const fs = require("fs");
+// const path = require("path");
 
-// Get all scores
-router.get("/scores", protect, isAdmin, async (req, res) => {
+// Configure Multer to handle file uploads (for single file)
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/"); // Adjust the folder where you want to save the files
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+// Get all test scores (Admin Access Only)
+router.get("/results", protect, isAdmin, async (req, res) => {
   try {
     const tests = await Test.find({ userId: { $ne: null } }).populate(
       "userId",
       "username email"
     );
-
     res.json(tests);
   } catch (error) {
     console.error("Error retrieving scores:", error);
@@ -26,7 +39,7 @@ router.get("/scores", protect, isAdmin, async (req, res) => {
 router.get("/top10", protect, isAdmin, async (req, res) => {
   try {
     const topScores = await Test.find()
-      .sort({ score: -1 })
+      .sort({ totalScore: -1 }) // Sort by totalScore, not score
       .limit(10)
       .populate("userId", "username email");
     res.json(topScores);
@@ -41,8 +54,6 @@ router.get("/top10", protect, isAdmin, async (req, res) => {
 // Get pie chart data
 router.get("/pieData", protect, isAdmin, async (req, res) => {
   try {
-    // Assuming you have a way to aggregate results by category or similar
-    // Adjust the aggregation based on your data structure
     const resultCounts = await Test.aggregate([
       { $unwind: "$answers" },
       { $group: { _id: "$answers.category", count: { $sum: 1 } } },
@@ -61,56 +72,96 @@ router.get("/pieData", protect, isAdmin, async (req, res) => {
   }
 });
 
-// Get leaderboard data
-router.get("/leaderboard", async (req, res) => {
+// Get leaderboard data (Top 10 users by total score)
+router.get("/leaderboard", protect, isAdmin, async (req, res) => {
   try {
-    const leaderboardData = await Test.aggregate([
-      {
-        $match: { userId: { $ne: null }, score: { $ne: null } },
-      },
+    const leaderboard = await Test.aggregate([
       {
         $group: {
           _id: "$userId",
-          totalScore: { $sum: "$score" },
-          count: { $sum: 1 },
+          totalScore: { $sum: "$totalScore" },
+          testCount: { $sum: 1 },
         },
       },
       {
         $lookup: {
-          from: "Users",
+          from: "users",
           localField: "_id",
           foreignField: "_id",
           as: "userDetails",
         },
       },
-      {
-        $unwind: "$userDetails",
-      },
-      {
-        $sort: { totalScore: -1 },
-      },
-      {
-        $limit: 10,
-      },
+      { $unwind: "$userDetails" },
+      { $sort: { totalScore: -1 } },
+      { $limit: 10 },
       {
         $project: {
           _id: 1,
           totalScore: 1,
-          count: 1,
+          testCount: 1,
           "userDetails.username": 1,
           "userDetails.email": 1,
         },
       },
     ]);
 
-    res.json(leaderboardData);
+    res.json(leaderboard);
   } catch (error) {
-    console.error("Error retrieving leaderboard data:", error);
-    res.status(500).json({
-      message: "Error retrieving leaderboard data",
-      error: error.message,
-    });
+    console.error("Error retrieving leaderboard:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving leaderboard", error: error.message });
   }
 });
+
+// Create a new test (Admin Access Only)
+router.post(
+  "/tests/create",
+  protect,
+  isAdmin,
+  upload.single("file"),
+  async (req, res) => {
+    const { testName, category, questions } = req.body;
+    const file = req.file;
+    const adminId = req.user.id;
+
+    // Validate uploaded file
+    if (
+      !file ||
+      (file.mimetype !== "application/pdf" &&
+        file.mimetype !== "application/msword" &&
+        file.mimetype !==
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    ) {
+      return res.status(400).json({ message: "Invalid file type" });
+    }
+
+    // validate file size
+    if (file.size > 10485760) {
+      // 10 MB limit
+      return res.status(400).json({ message: "File size exceeds limit" });
+    }
+
+    try {
+      const newTest = new Test({
+        testName,
+        category,
+        filePath: file.path,
+        questions: JSON.parse(questions),
+        createdBy: adminId,
+      });
+
+      await newTest.save();
+      res
+        .status(201)
+        .json({ message: "Test created successfully", testId: newTest._id });
+    } catch (error) {
+      console.error("Error creating test:", error);
+      res
+        .status(500)
+        .json({ message: "Error creating test", error: error.message });
+    }
+  }
+);
 
 module.exports = router;

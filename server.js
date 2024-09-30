@@ -6,15 +6,19 @@ const cors = require("cors");
 const { router: authRoutes } = require("./routes/Authentication");
 const testRoutes = require("./routes/Test");
 const adminRoutes = require("./routes/Admin");
+const userDashboardRoutes = require("./routes/UserDashboard");
 const dotenv = require("dotenv");
+mongoose.set("strictPopulate", false);
+
 // const seed = require("./seed");
 dotenv.config();
 
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
-      "https://coursemasterserver.onrender.com",
+      // "http://localhost:5173"
+      "https://course-master-dusky.vercel.app/",
+      // "https://coursemasterserver.onrender.com",
     ],
     credentials: true,
   })
@@ -34,6 +38,7 @@ mongoose
 app.use("/auth", authRoutes); //User authentication routes
 app.use("/test", testRoutes); // Test routes
 app.use("/admin", adminRoutes);
+app.use("/dashboard/user", userDashboardRoutes);
 // app.use(seed);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
