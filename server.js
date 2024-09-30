@@ -17,7 +17,8 @@ app.use(
   cors({
     origin: [
       // "http://localhost:5173"
-      "https://course-master-dusky.vercel.app/",
+      "https://coursemaster.vercel.app/",
+      "https://coursemasteradmin.vercel.app/",
       // "https://coursemasterserver.onrender.com",
     ],
     credentials: true,
