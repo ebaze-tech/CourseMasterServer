@@ -16,7 +16,8 @@ dotenv.config();
 app.use(
   cors({
     origin: [
-      // "http://localhost:5173"
+      // "http://localhost:5173",
+      // "http://localhost:5174",
       "https://coursemaster.vercel.app",
       "https://coursemasteradmin.vercel.app",
       "https://coursemasterserver.onrender.com",

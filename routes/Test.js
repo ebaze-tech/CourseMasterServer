@@ -36,6 +36,10 @@ router.get("/questions/:category", protect, async (req, res) => {
   }
 });
 
+// router.post("/submit", protect, async (req, res) => {
+//   const {caategory,answer} = req.
+// })
+
 // Submit the test
 router.post("/submit", protect, async (req, res) => {
   const { category, answers } = req.body;
