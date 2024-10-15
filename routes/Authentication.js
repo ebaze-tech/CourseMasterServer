@@ -97,6 +97,46 @@ router.post("/admin/register", async (req, res) => {
   }
 });
 
+// Login an existing user
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  // Input validation
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
+  console.log("Input Password:", password);
+
+  try {
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      console.log("User not found");
+      return res.status(401).json({ message: "Email mismatch" });
+    }
+
+    console.log("Stored Hash:", user.password);
+    // Pass the password to matchPassword
+    const isMatch = await user.matchPassword(password);
+    console.log("Password Match Result:", isMatch);
+
+    if (!isMatch) {
+      console.log("Password mismatch");
+      return res.status(401).json({ message: "Password mismatch" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    console.log(token);
+    res.json({ token });
+  } catch (error) {
+    console.error("Login error:", error); // Log the error for debugging
+    res.status(500).json({ message: "Error logging in", error: error.message });
+  }
+});
+
 // Login admin
 router.post("/admin/login", async (req, res) => {
   const { adminNumber, password } = req.body;
@@ -142,45 +182,6 @@ router.post("/admin/login", async (req, res) => {
   }
 });
 
-// Login an existing user
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  // Input validation
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-
-  console.log("Input Password:", password);
-
-  try {
-    const user = await User.findOne({ email }).select("+password");
-    if (!user) {
-      console.log("User not found");
-      return res.status(401).json({ message: "Email mismatch" });
-    }
-
-    console.log("Stored Hash:", user.password);
-    // Pass the password to matchPassword
-    const isMatch = await user.matchPassword(password);
-    console.log("Password Match Result:", isMatch);
-
-    if (!isMatch) {
-      console.log("Password mismatch");
-      return res.status(401).json({ message: "Password mismatch" });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    console.log(token);
-    res.json({ token });
-  } catch (error) {
-    console.error("Login error:", error); // Log the error for debugging
-    res.status(500).json({ message: "Error logging in", error: error.message });
-  }
-});
 
 // Middleware to authenticate JWT token
 const protect = (req, res, next) => {

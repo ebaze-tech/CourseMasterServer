@@ -36,10 +36,6 @@ router.get("/questions/:category", protect, async (req, res) => {
   }
 });
 
-// router.post("/submit", protect, async (req, res) => {
-//   const {caategory,answer} = req.
-// })
-
 // Submit the test
 router.post("/submit", protect, async (req, res) => {
   const { category, answers } = req.body;
@@ -103,17 +99,6 @@ router.get("/submitted", protect, isAdmin, async (req, res) => {
   try {
     const tests = await Test.find().populate("userId", "username email");
     console.log("Retrieved tests:", tests);
-
-    // Log the tests retrieved, along with any that don't have a userId
-
-    // tests.forEach((test) => {
-    //   if (test.userId) {
-    //     console.log(`Test by ${test.userId.username} retrieved.`);
-    //   } else {
-    //     console.log(`Test ID ${test._id} has no associated user.`);
-    //   }
-    // });
-
     res.json(tests);
   } catch (error) {
     console.error("Error retrieving tests:", error);
