@@ -11,7 +11,6 @@ const userSchema = new mongoose.Schema({
   level: { type: Number, required: true },
   hostel: { type: String, required: true },
   adminNumber: { type: String, default: "" },
-  password: { type: String, default: "" },
 });
 
 // Hash password before saving the user
