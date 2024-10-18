@@ -7,7 +7,8 @@ const { router: authRoutes } = require("./routes/Authentication");
 const testRoutes = require("./routes/Test");
 const adminRoutes = require("./routes/Admin");
 const userDashboardRoutes = require("./routes/UserDashboard");
-const fetchUserRoutes = require("./routes/FetchUser.js");
+const fetchUserRoutes = require("./routes/FetchUser");
+const testSchedule = require("./routes/TestSchedule");
 const dotenv = require("dotenv");
 mongoose.set("strictPopulate", false);
 
@@ -42,44 +43,26 @@ app.use("/auth", authRoutes); //User authentication routes
 app.use("/test", testRoutes); // Test routes
 app.use("/admin", adminRoutes);
 app.use("/dashboard/user", userDashboardRoutes);
-app.use("/fetchuser/:id", fetchUserRoutes);
+app.use("/userdetail", fetchUserRoutes);
+app.use("/schedule", testSchedule);
 // app.use(seed);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 app.get("/current-datetime", (req, res) => {
-  //  Get current UTC date and time
-  const utcDate = new Date();
+  try {
+    const utcDate = new Date();
+    const watDate = new Date(utcDate.getTime() + 1 * 60 * 60 * 1000); // Adjusting for WAT
 
-  //Convert UTC date and time to local time zone
-  const watDate = new Date(utcDate.getTime() + 1 * 60 * 60 * 1000);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    const formattedDate = watDate.toLocaleDateString(undefined, options);
 
-  // Get date components
-  const year = watDate.getFullYear();
-  const month = watDate.getMonth();
-  const day = watDate.getDate();
-
-  // Array of month names
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  // Get month in words
-  const months = monthNames[month];
-
-  // Format date string
-  const formattedDate = `${months} ${day} ${year}`;
-  res.json({ datetime: formattedDate });
+    const option = { month: "long", year: "numeric" };
+    const formattedMonth = watDate.toLocaleDateString(undefined, option);
+    res.json({ formattedDate, formattedMonth }); // Return formatted date
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Couldn't fetch date." });
+  }
 });
 
 // Test route to check server status.

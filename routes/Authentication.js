@@ -1,21 +1,39 @@
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-// const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Admin = require("../models/Admin");
 const router = express.Router();
 const dotenv = require("dotenv");
 dotenv.config();
 
-// JWT secret
-
 // Register a new user
 router.post("/register", async (req, res) => {
-  const { username, email, password } = req.body;
+  const {
+    username,
+    email,
+    password,
+    age,
+    department,
+    faculty,
+    level,
+    hostel,
+    matricNumber,
+  } = req.body;
   console.log("Original Password:", password);
 
   // Check if all fields are provided
-  if (!username || !email || !password) {
+  if (
+    !username ||
+    !email ||
+    !password ||
+    !age ||
+    !department ||
+    !faculty ||
+    !level ||
+    !hostel ||
+    !matricNumber
+  ) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -32,24 +50,109 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Username already taken" });
     }
 
-    // Hash the password before saving
-    // const hashedPassword = await bcrypt.hash(password, 10);
+    // Check if matricNumber is already registered
+    const existingUserByMatric = await User.findOne({ matricNumber });
+    if (existingUserByMatric) {
+      return res
+        .status(400)
+        .json({ message: "Matric Number already registered" });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new user
     const user = new User({
       username,
       email,
-      password, //hashedPassword, // Store the hashed password
+      password: hashedPassword, // Store the hashed password
+      age,
+      department,
+      faculty,
+      level,
+      hostel,
+      matricNumber,
     });
-    // console.log("Hashed Password:", hashedPassword);
-
     await user.save();
-    res.status(201).json({ message: "User registered successfully" });
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    const userDetails = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      age: user.age,
+      department: user.department,
+      faculty: user.faculty,
+      level: user.level,
+      hostel: user.hostel,
+      matricNumber: user.matricNumber,
+      password: user.password,
+    };
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: userDetails,
+      token,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Registration error:", error);
     res
       .status(500)
       .json({ message: "Error registering user", error: error.message });
+  }
+});
+
+// Login an existing user
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  // Input validation
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
+  console.log("Input Password:", password);
+
+  try {
+    // Find the user by email and include password field
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+    console.log(user.password);
+    // Compare the passwords
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    // Send token and user details (excluding  password)
+    const userDetails = {
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      // password: user.password,
+      age: user.age,
+      department: user.department,
+      faculty: user.faculty,
+      level: user.level,
+      hostel: user.hostel,
+      matricNumber: user.matricNumber,
+    };
+    res.json({ token, user: userDetails, message: "Login successful" });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Error logging in", error: error.message });
   }
 });
 
@@ -76,19 +179,31 @@ router.post("/admin/register", async (req, res) => {
       return res.status(400).json({ message: "Number already taken" });
     }
 
-    // Hash the password before saving
-    // const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create a new Admin
     const newAdmin = new Admin({
       adminNumber,
       email,
-      password, //hashedPassword, // Store the hashed password
+      password: hashedPassword,
     });
-    // console.log("Hashed Password:", hashedPassword);
 
     await newAdmin.save();
-    res.status(201).json({ message: "Admin registered successfully" });
+
+    // Generate JWT token
+    const token = jwt.sign({ id: newAdmin._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    const adminDetails = {
+      id: newAdmin._id,
+      adminNumber,
+      email,
+    };
+    res.status(201).json({
+      message: "Admin registered successfully",
+      token,
+      admin: adminDetails,
+    });
   } catch (error) {
     console.error(error);
     res
@@ -96,47 +211,6 @@ router.post("/admin/register", async (req, res) => {
       .json({ message: "Error registering admin", error: error.message });
   }
 });
-
-// Login an existing user
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  // Input validation
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-
-  console.log("Input Password:", password);
-
-  try {
-    const user = await User.findOne({ email }).select("+password");
-    if (!user) {
-      console.log("User not found");
-      return res.status(401).json({ message: "Email mismatch" });
-    }
-
-    console.log("Stored Hash:", user.password);
-    // Pass the password to matchPassword
-    const isMatch = await user.matchPassword(password);
-    console.log("Password Match Result:", isMatch);
-
-    if (!isMatch) {
-      console.log("Password mismatch");
-      return res.status(401).json({ message: "Password mismatch" });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    console.log(token);
-    res.json({ token });
-  } catch (error) {
-    console.error("Login error:", error); // Log the error for debugging
-    res.status(500).json({ message: "Error logging in", error: error.message });
-  }
-});
-
 // Login admin
 router.post("/admin/login", async (req, res) => {
   const { adminNumber, password } = req.body;
@@ -161,7 +235,7 @@ router.post("/admin/login", async (req, res) => {
     console.log("Login - Stored Hashed Password:", this.password);
 
     // Pass the password to matchPassword
-    const isMatch = await user.matchPassword(password);
+    const isMatch = await user.matchPassword(password, user.password);
     console.log("Password Match Result:", isMatch);
     console.log("Login - Password Comparison Result:", isMatch);
 
@@ -174,24 +248,29 @@ router.post("/admin/login", async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
-    console.log(token);
-    res.json({ token });
+
+    const adminDetails = {
+      id: user._id,
+      adminNumber: user.adminNumber,
+      email: user.email,
+    };
+    console.log({ token, user: adminDetails, message: "Login succesful." });
+    res.json({ token, user: adminDetails, message: "Login succesful." });
   } catch (error) {
     console.error("Login error:", error); // Log the error for debugging
     res.status(500).json({ message: "Error logging in", error: error.message });
   }
 });
 
-
-// Middleware to authenticate JWT token
-const protect = (req, res, next) => {
+// Middleware to authenticate user JWT token
+const protect = async (req, res, next) => {
   console.log("Authorization Header:", req.headers.authorization);
   const token = req.headers.authorization?.split(" ")[1];
 
   if (!token) {
     return res.status(401).json({ message: "Access banned." });
   }
-
+  // const user = await User.findById(req.user.id);
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;

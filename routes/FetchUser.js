@@ -1,20 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const UserModel = require("../models/User");
+const { protect } = require("./Authentication");
 
-router.get("/user/:id", async (req, res) => {
+router.get("/fetchuser/:id", protect, async (req, res) => {
+  // const id = req.params.id;
+  console.log("Fetched user id:", req.params.id);
   try {
-    const userId = req.params.id; //Get user ID from request params
-    const user = await UserModel.findById(userId);
-
-    if (user) {
-      res.json(user); //Return user details
-    } else {
-      res.status(404).json({ message: "User not found" });
-    }
+    const user = await UserModel.findById(req.params.id);
+    console.log("User found: ", user);
+    res.json(user);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching user: ", error);
+    res.status(500).json({
+      message: "Error fetching user:",
+      error,
+    });
   }
 });
-
 module.exports = router;

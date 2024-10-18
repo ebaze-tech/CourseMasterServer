@@ -10,7 +10,8 @@ const userSchema = new mongoose.Schema({
   faculty: { type: String, required: true },
   level: { type: Number, required: true },
   hostel: { type: String, required: true },
-  adminNumber: { type: String, default: "" },
+  matricNumber: { type: Number, required: true, unique: true },
+  adminNumber: { type: String, default: "", unique: true },
 });
 
 // Hash password before saving the user
@@ -28,12 +29,12 @@ userSchema.pre("save", async function (next) {
 });
 
 // Compare the given password with the hashed password
-userSchema.methods.matchPassword = async function (password) {
-  try {
-    return await bcrypt.compare(password, this.password); // Compare passwords
-  } catch (error) {
-    throw new Error("Error comparing passwords"); // Handle errors
-  }
-};
+// userSchema.methods.matchPassword = async function (plainPassword) {
+//   try {
+//     return await bcrypt.compare(plainPassword, this.password); // Compare passwords
+//   } catch (error) {
+//     throw new Error("Error comparing passwords",error); // Handle errors
+//   }
+// };
 
 module.exports = mongoose.model("User", userSchema);
