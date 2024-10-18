@@ -75,37 +75,42 @@ router.get("/user/testschedule", protect, async (req, res) => {
 // Route to find or view previous test schedules by day,week or month
 router.get("/previous", protect, async (req, res) => {
   try {
-    const { view, month, week, day } = req.query;
+    const { month, week, day } = req.query;
     let startDate, endDate;
 
-    if (view === "month" && month) {
+    // Search by month, week, or day based on query parameters
+    if (month) {
       // Search by month
       startDate = moment(month, "YYYY-MM").startOf("month").toDate();
-      endDate = moment(month, "YYYY-MM").endOf("moth").toDate();
-    } else if (view === "week" && week) {
+      endDate = moment(month, "YYYY-MM").endOf("month").toDate();
+    } else if (week) {
       // Search by week
       startDate = moment(week, "YYYY-[W]WW").startOf("isoWeek").toDate();
       endDate = moment(week, "YYYY-[W]WW").endOf("isoWeek").toDate();
-    } else if (view === "day" && day) {
+    } else if (day) {
       // Search by day
       startDate = moment(day, "YYYY-MM-DD").startOf("day").toDate();
       endDate = moment(day, "YYYY-MM-DD").endOf("day").toDate();
     } else {
       return res.status(400).json({
         message:
-          "Please provide a valid view with corresponding day,week or month.",
+          "Please provide either 'month', 'week', or 'day' in the query.",
       });
     }
 
-    // Find schedules within the specifies range
+    // Find schedules within the specified date range
     const schedules = await TestSchedule.find({
-      date: { $gte: startDate, $lte: endDate },
+      time: { $gte: startDate, $lte: endDate },
     });
+
+    if (schedules.length === 0) {
+      return res.status(404).json({ message: "No test schedules found." });
+    }
 
     res.status(200).json(schedules);
   } catch (error) {
     console.error(error);
-    res.status(200).json({ messahe: "Server error: ", error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
