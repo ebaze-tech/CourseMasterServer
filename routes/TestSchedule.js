@@ -55,7 +55,7 @@ router.post("/testschedule/create", protect, isAdmin, async (req, res) => {
 });
 
 // Route to view a test schedule
-router.get("/admin/testschedule", protect, async (req, res) => {
+router.get("/admin/testschedule", protect, isAdmin, async (req, res) => {
   try {
     const schedules = await TestSchedule.find({});
     res.json(schedules);
@@ -63,7 +63,7 @@ router.get("/admin/testschedule", protect, async (req, res) => {
     res.status(500).json({ message: "Error fetching test schedules", error });
   }
 });
-router.get("/user/testschedule", protect, isAdmin, async (req, res) => {
+router.get("/user/testschedule", protect, async (req, res) => {
   try {
     const schedules = await TestSchedule.find({});
     res.json(schedules);
