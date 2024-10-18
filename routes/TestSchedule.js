@@ -12,8 +12,14 @@ const nodemailer = require("nodemailer");
 router.post("/testschedule/create", protect, isAdmin, async (req, res) => {
   try {
     const { course, lecturerName, description, time, duration } = req.body;
-
-    let schedule = await TestSchedule.findOne({ course });
+    console.log(req.body);
+    let schedule = await TestSchedule.findOne({
+      course,
+      lecturerName,
+      description,
+      time,
+      duration,
+    });
 
     if (schedule) {
       // update existing schedule
@@ -27,9 +33,9 @@ router.post("/testschedule/create", protect, isAdmin, async (req, res) => {
       schedule = new TestSchedule({
         course,
         lecturerName,
-        description,
         time,
         duration,
+        description,
       });
     }
     await schedule.save();
@@ -49,7 +55,15 @@ router.post("/testschedule/create", protect, isAdmin, async (req, res) => {
 });
 
 // Route to view a test schedule
-router.get("/user/testschedule", protect, async (req, res) => {
+router.get("/admin/testschedule", protect, async (req, res) => {
+  try {
+    const schedules = await TestSchedule.find({});
+    res.json(schedules);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching test schedules", error });
+  }
+});
+router.get("/user/testschedule", protect, isAdmin, async (req, res) => {
   try {
     const schedules = await TestSchedule.find({});
     res.json(schedules);
