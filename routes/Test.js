@@ -119,7 +119,7 @@ router.get("/submitted/:id", protect, isAdmin, async (req, res) => {
       });
 
     if (!test) return res.status(404).json({ message: "Test not found" });
-    res.json(test);
+    res.status(200).json(test);
   } catch (error) {
     console.error("Error retrieving test:", error);
     res
@@ -131,7 +131,7 @@ router.get("/submitted/:id", protect, isAdmin, async (req, res) => {
 router.get("/test-query", async (req, res) => {
   try {
     const tests = await Test.find();
-    res.json(tests);
+    res.status(200).json(tests);
   } catch (error) {
     res.status(500).json({ message: "Error executing test query", error });
   }

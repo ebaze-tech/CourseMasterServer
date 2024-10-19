@@ -63,7 +63,7 @@ router.get("/admin/testschedule", protect, isAdmin, async (req, res) => {
     res.status(500).json({ message: "Error fetching test schedules", error });
   }
 });
-router.get("/user/testschedule", protect, async (req, res) => {
+router.get("/user/testschedule", async (req, res) => {
   try {
     const schedules = await TestSchedule.find({});
     res.json(schedules);
@@ -71,6 +71,43 @@ router.get("/user/testschedule", protect, async (req, res) => {
     res.status(500).json({ message: "Error fetching test schedules", error });
   }
 });
+
+// view test schedule by id
+router.get("/user/testschedule/:id", async (req, res) => {
+  try {
+    const schedule = await TestSchedule.findById(req.params.id);
+
+    if (!schedule) {
+      console.log("Could not find test schedule with id: ", req.params.id);
+      res.status(404).json({ message: "Could not find test schedule." });
+    }
+    console.log("Test schedule found: ", schedule);
+    res.status(200).json(schedule);
+  } catch (error) {
+    console.log("Could not fetch test schedule: ", error);
+    res.status(500).json({ message: "Couldn't fetch test schedule.", error });
+  }
+});
+
+/*
+router.get("/user/testschedule/:id", async (req, res) => {
+  try {
+    const schedule = await TestSchedule.findById(req.params.id);
+
+    if (!schedule) {
+      console.log("Could not find test schedule with id:", req.params.id);
+      return res.status(404).json({ message: "Could not find test schedule." });
+    }
+
+    console.log("Test schedule found:", schedule);
+    return res.status(200).json(schedule);
+  } catch (error) {
+    console.log("Could not fetch test schedule:", error);
+    return res.status(500).json({ message: "Couldn't fetch test schedule.", error });
+  }
+});
+F
+ */
 
 // Route to find or view previous test schedules by day,week or month
 router.get("/previous", protect, async (req, res) => {
